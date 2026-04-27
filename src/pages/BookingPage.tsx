@@ -87,28 +87,19 @@ const       BookingPage: React.FC = () => {
   const apiUrl = (path: string) => `${apiBase}${path}`;
   const courseSlug = (searchParams.get('course') || '').trim();
   const fallbackCourse = courseSlug ? COURSE_FALLBACKS[courseSlug] : undefined;
-  // Always default to course booking if no context is present
   const hasDirectBookingContext = Boolean(
     searchParams.get('item') ||
     searchParams.get('type') ||
     searchParams.get('price') ||
     fallbackCourse
   );
-  // bookingKind param or fallback to 'course' if no context
-  const selectedBookingKind = (searchParams.get('bookingKind') || (!hasDirectBookingContext ? 'course' : '')).trim();
+  const selectedBookingKind = (searchParams.get('bookingKind') || '').trim();
   const bookingSource = (searchParams.get('source') || 'direct').trim();
   const rawType = (searchParams.get('type') || '').trim();
-  // Determine itemType: explicit type param, or fallback to selectedBookingKind, or 'course'
-  let itemType: BookingItemType;
-  if (rawType === 'dive' || rawType === 'stay' || rawType === 'course') {
-    itemType = rawType as BookingItemType;
-  } else if (hasDirectBookingContext) {
-    itemType = 'course';
-  } else if (selectedBookingKind === 'dive') {
-    itemType = 'dive';
-  } else {
-    itemType = 'course';
-  }
+  const genericType: BookingItemType = selectedBookingKind === 'course' ? 'course' : 'dive';
+  const itemType: BookingItemType = rawType === 'dive' || rawType === 'stay' || rawType === 'course'
+    ? rawType
+    : (hasDirectBookingContext ? 'course' : genericType);
   const itemTitle = searchParams.get('item') || fallbackCourse?.item || (itemType === 'course' ? 'Course Booking' : 'Fun Dive');
   const isDiveBooking = itemType === 'dive';
   const isCourseBooking = itemType === 'course';
@@ -176,7 +167,8 @@ const       BookingPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = async (data: BookingFormData) => {
-    // Customer submits booking, admin gets email, status is always 'pending' until admin acts
+    console.log('Form submitted with data:', data);
+    console.log('Form validation errors:', form.formState.errors);
     setIsSubmitting(true);
     try {
       const amountMajor = (isStayBooking ? 0 : depositMajor) + totalAddons;
@@ -187,21 +179,389 @@ const       BookingPage: React.FC = () => {
             amount: addon.amount,
           }))
         : [];
-                  <Select>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your experience level" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">No diving experience</SelectItem>
-                      <SelectItem value="beginner">Beginner (1-10 dives)</SelectItem>
-                      <SelectItem value="intermediate">Intermediate (10-50 dives)</SelectItem>
-                      <SelectItem value="advanced">Advanced (50+ dives)</SelectItem>
-                      <SelectItem value="professional">Professional diver</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
+      const bookingItemTitle = isFunDiveBooking
+        ? `${itemTitle} (${funDiveCount} dives)`
+        : (isCourseBooking && courseFunDiveCount > 0
+          ? `${itemTitle} + ${courseFunDiveCount} Fun Dives`
+          : itemTitle);
+      const addonsText = isDiveBooking
+        ? (availableAddons.filter(a => selectedAddons[a.id]).map(a => a.label).join(', ') || 'None')
+        : 'N/A (course booking)';
+      const messageWithSource = `${data.message || 'No additional message'}\n\nBooking Source: ${bookingSource}`;
+
+      const apiBookingPayload = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone || null,
+        item_type: itemType,
+        course_title: bookingItemTitle,
+        preferred_date: data.preferred_date || null,
+        experience_level: data.experience_level || null,
+        addons: addonsText,
+        addons_json: JSON.stringify(selectedAddonsList),
+        addons_total: totalAddons,
+        subtotal_amount: totalItemCostMajor > 0 ? totalItemCostMajor : null,
+        total_payable_now: amountMajor > 0 ? amountMajor : null,
+        message: messageWithSource,
+        status: 'pending',
+        deposit_amount: depositMajor,
+        total_amount: totalItemCostMajor,
+        due_amount: totalItemCostMajor - depositMajor,
+      };
+
+      let persisted = false;
+      try {
+        const dbRes = await fetch(`${import.meta.env.VITE_API_URL}/api/sqlite-bookings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(apiBookingPayload),
+        });
+        persisted = dbRes.ok;
+      } catch (dbErr) {
+        console.warn('Booking persistence failed; continuing with email flow.', dbErr);
+      }
+
+      // Send booking notification via backend API
+      const payload = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone || 'N/A',
+        preferred_date: data.preferred_date || 'N/A',
+        experience_level: data.experience_level || 'N/A',
+        payment_choice: data.paymentChoice === 'now' ? 'Pay deposit now via PayPal' : 'Pay later (inquire only)',
+        paypal_link: data.paymentChoice === 'now' ? `${PAYPAL_LINK}/${amountMajor}THB` : null,
+        item_title: bookingItemTitle,
+        full_price: totalItemCostMajor > 0 ? `฿${totalItemCostMajor}` : (isStayBooking ? 'Quote on request' : 'N/A'),
+        dive_count: isFunDiveBooking ? funDiveCount : 'N/A',
+        course_fun_dive_count: isCourseBooking ? courseFunDiveCount : 'N/A',
+        course_fun_dive_cost: isCourseBooking && courseFunDiveCostMajor > 0 ? `฿${courseFunDiveCostMajor}` : 'N/A',
+        stay_with_us: isCourseBooking
+          ? (stayWithUs ? 'Yes - accommodation free with course' : 'No')
+          : (isDiveBooking ? (stayWithUs ? 'Yes - accommodation requested with dive booking' : 'No') : 'N/A'),
+        deposit_amount: amountMajor > 0 ? `฿${amountMajor}` : 'Quote on request',
+        addons: addonsText,
+        booking_source: bookingSource,
+        message: messageWithSource,
+      };
+
+      const res = await fetch(apiUrl('/api/send-booking-notification'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const responseData = await res.json().catch(() => ({}));
+
+      // Notify user based on email API result, but booking is already persisted
+      if (res.ok && responseData.success) {
+        if (responseData.warning) {
+          toast.warning(`Booking saved, but email notification needs attention: ${responseData.warning}`);
+        }
+        if (data.paymentChoice === 'now' && amountMajor > 0) {
+          setShowPaymentLinks(true);
+        } else {
+          setShowSkipPaymentPopup(true);
+        }
+      } else {
+        const errMsg = responseData?.message || responseData?.error || `HTTP ${res.status}`;
+        console.error('Booking notification error:', errMsg, responseData);
+        if (persisted) {
+          toast.error(`Inquiry saved, but email notification failed: ${errMsg}`);
+          if (data.paymentChoice === 'now' && amountMajor > 0) {
+            setShowPaymentLinks(true);
+          } else {
+            setShowSkipPaymentPopup(true);
+          }
+        } else {
+          toast.error(`Submission failed: ${errMsg}. Please retry.`);
+        }
+      }
+    } catch (err) {
+      console.error('Form submission error:', err);
+      toast.error('Submission failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Rezdy prefill removed.
+
+  return (
+    <div className="min-h-screen bg-background py-16">
+      <div className="max-w-4xl mx-auto bg-background rounded-xl shadow-xl shadow-blue-900/20 p-8">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-bold mb-2">Book: {itemTitle}</h1>
+        </div>
+        <p className="text-sm text-muted-foreground mb-6">Select options and submit your booking or inquiry.</p>
+
+        {!hasDirectBookingContext && (
+          <div className="mb-6 p-4 border rounded-lg bg-blue-700 border-blue-600 text-white">
+            <h3 className="font-semibold mb-3 text-white">What would you like to book?</h3>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={isCourseBooking ? 'default' : 'outline'}
+                className={isCourseBooking ? 'bg-blue-900 hover:bg-blue-950 text-white border-blue-900' : 'bg-white/10 hover:bg-white/20 text-white border-white/40'}
+                onClick={() => navigate(`/booking?source=${encodeURIComponent(bookingSource)}&bookingKind=course`)}
+              >
+                Course
+              </Button>
+              <Button
+                type="button"
+                variant={isDiveBooking ? 'default' : 'outline'}
+                className={isDiveBooking ? 'bg-blue-500 hover:bg-blue-400 text-white border-blue-500' : 'bg-white/10 hover:bg-white/20 text-white border-white/40'}
+                onClick={() => navigate(`/booking?source=${encodeURIComponent(bookingSource)}&bookingKind=dive`)}
+              >
+                Fun Dives
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Special Packages Banner */}
+        {!hasDirectBookingContext && (
+          <div className="mb-6 p-6 border-2 border-emerald-500 rounded-lg bg-emerald-50">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 text-4xl">🎓</div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-emerald-900 mb-2">3 Specialty Bundle - Save ฿6,000!</h3>
+                <p className="text-emerald-800 mb-3">
+                  Enroll in three PADI Specialty Dive Courses and pay less. It's a unique opportunity to explore various aspects of scuba diving, from marine life identification to underwater photography.
+                </p>
+                <div className="flex items-center gap-4 mb-3">
+                  <span className="text-3xl font-bold text-emerald-900">฿18,000</span>
+                  <span className="text-emerald-700 line-through text-xl">฿24,000</span>
+                  <span className="text-sm text-emerald-700">(3 courses of your choice)</span>
+                </div>
+                <Button 
+                  variant="default"
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => window.location.href = '/booking?item=3%20Specialty%20Bundle&type=course&price=18000&currency=THB'}
+                >
+                  Book 3 Specialty Bundle
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              {itemType === 'course' ? (
+                <>
+                  <div className="text-lg font-semibold">Course cost</div>
+                  <div className="text-2xl font-bold">{totalItemCostMajor > 0 ? `฿${totalItemCostMajor}` : 'Contact us'}</div>
+                  {courseFunDiveCostMajor > 0 && (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Includes Fun Dives add-on: ฿{courseFunDiveCostMajor}
+                    </div>
+                  )}
+                  <div className="text-sm text-muted-foreground mt-1">Deposit payable now (20%): {depositMajor > 0 ? `฿${depositMajor}` : 'Contact us'}</div>
+                </>
+              ) : itemType === 'dive' ? (
+                <>
+                  <div className="text-lg font-semibold">Dive price</div>
+                  <div className="text-2xl font-bold">{courseCostMajor > 0 ? `฿${courseCostMajor}` : 'Contact us'}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Deposit payable now (20%): {depositMajor > 0 ? `฿${depositMajor}` : 'Contact us'}</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-lg font-semibold">Accommodation request</div>
+                  <div className="text-2xl font-bold">Custom quote</div>
+                  <div className="text-sm text-muted-foreground mt-1">We will confirm room options and exact seasonal pricing.</div>
+                </>
+              )}
+            </div>
+            {isDiveBooking && (
+              <div className="text-right">
+                <div className="text-lg font-semibold">Add-ons</div>
+                <div className="text-sm text-muted-foreground">Select extras below</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mb-6 p-4 border rounded-lg bg-muted/20">
+          <h3 className="font-semibold mb-3">Quick booking options</h3>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (isCourseBooking || isDiveBooking) {
+                  setStayWithUs(true);
+                  setShowStayPopup(true);
+                  return;
+                }
+                navigate('/booking?item=Resort%20Accommodation&type=stay&currency=THB');
+              }}
+            >
+              Stay with us at our resort accommodation
+            </Button>
+          </div>
+        </div>
+
+        {(isCourseBooking || isDiveBooking) && (
+          <div className="mb-6 p-3 border rounded-lg bg-blue-700 border-blue-600 text-white text-sm">
+            If you choose alternative accommodation, please give us the details so we can arrange all necessary arrangements.
+          </div>
+        )}
+
+        {isCourseBooking && (
+          <div className="mb-6 p-4 border rounded-lg bg-muted/30">
+            <h3 className="font-semibold mb-3">Add Fun Dives to your course</h3>
+            <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-11 gap-2 mb-3">
+              {Array.from({ length: 11 }, (_, i) => i).map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => setCourseFunDiveCount(count)}
+                  className={`px-3 py-2 rounded border text-sm font-medium transition ${courseFunDiveCount === count ? 'bg-blue-600 text-white border-blue-600' : 'bg-background hover:bg-blue-50 border-border'}`}
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              Pricing: 1 dive = ฿1,000, 2-9 dives = ฿900 per dive, 10+ dives = ฿800 per dive.
+              Selected add-on: {courseFunDiveCount} dives{courseFunDiveCount > 0 ? ` (฿${courseFunDiveCostMajor})` : ''}.
+            </p>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={stayWithUs}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setStayWithUs(checked);
+                  if (checked) {
+                    setShowStayPopup(true);
+                  }
+                }}
+              />
+              Stay with us (accommodation)
+            </label>
+          </div>
+        )}
+
+        {isCourseBooking && stayWithUs && (
+          <div className="mb-6 p-3 border rounded-lg bg-emerald-50 border-emerald-200 text-emerald-800 text-sm">
+            Accommodation is FREE with this course. Course pricing remains unchanged.
+          </div>
+        )}
+
+        {isDiveBooking && stayWithUs && (
+          <div className="mb-6 p-3 border rounded-lg bg-blue-50 border-blue-200 text-blue-900 text-sm">
+            Deposit payable now for your dives and accommodation total pricing to be confirmed. Please leave details in the form below and we will contact to confirm your total amount payable on arrival or deposit before arriving.
+          </div>
+        )}
+
+        {isFunDiveBooking && (
+          <div className="mb-6 p-4 border rounded-lg bg-muted/30">
+            <h3 className="font-semibold mb-3">Choose number of dives</h3>
+            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-10 gap-2 mb-3">
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => setFunDiveCount(count)}
+                  className={`px-3 py-2 rounded border text-sm font-medium transition ${funDiveCount === count ? 'bg-blue-600 text-white border-blue-600' : 'bg-background hover:bg-blue-50 border-border'}`}
+                >
+                  {count} {count === 1 ? 'dive' : 'dives'}
+                </button>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Pricing: 1 dive = ฿1,000, 2-9 dives = ฿900 per dive, 10+ dives = ฿800 per dive.
+              Current rate: ฿{getFunDiveRate(funDiveCount)} per dive.
+            </p>
+          </div>
+        )}
+
+        {isDiveBooking && (
+          <div className="mb-6 p-4 border rounded-lg bg-muted/20">
+            <h3 className="font-semibold mb-3">Optional Extras</h3>
+            <div className="flex flex-col gap-4">
+              {availableAddons.map((a) => (
+                <div key={a.id} className="flex items-center gap-4">
+                  <span className="w-40 font-medium">{a.label}</span>
+                  <span className="text-sm text-muted-foreground flex-1">฿{a.amount}</span>
+                  <select
+                    className="border rounded px-2 py-1 text-sm"
+                    title={`${a.label} selection`}
+                    aria-label={`${a.label} selection`}
+                    value={selectedAddons[a.id] ? '1' : '0'}
+                    onChange={e => setSelectedAddons(s => ({ ...s, [a.id]: e.target.value === '1' }))}
+                  >
+                    <option value="0">No</option>
+                    <option value="1">Yes</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mb-6 text-right">
+          <div className="text-sm text-muted-foreground">
+            {isStayBooking ? 'Payment:' : (isDiveBooking ? 'Total payable now (incl. add-ons):' : 'Total payable now:')}
+          </div>
+          <div className="text-2xl font-bold">{isStayBooking ? 'Quote on request' : `฿${depositMajor + totalAddons}`}</div>
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField control={form.control} name="name" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2"><User className="h-4 w-4" /> Full Name *</FormLabel>
+                <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="email" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email *</FormLabel>
+                <FormControl><Input type="email" placeholder="john@example.com" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="phone" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2"><Phone className="h-4 w-4" /> Phone</FormLabel>
+                <FormControl><Input placeholder="+66 123 456 789" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="preferred_date" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Preferred Date</FormLabel>
+                <FormControl><Input type="date" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="experience_level" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Experience Level</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your experience level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">No diving experience</SelectItem>
+                    <SelectItem value="beginner">Beginner (1-10 dives)</SelectItem>
+                    <SelectItem value="intermediate">Intermediate (10-50 dives)</SelectItem>
+                    <SelectItem value="advanced">Advanced (50+ dives)</SelectItem>
+                    <SelectItem value="professional">Professional diver</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
               </FormItem>
             )} />
 
@@ -290,42 +650,45 @@ const       BookingPage: React.FC = () => {
         )}
       </div>
 
-      <><AlertDialog open={showStayPopup} onOpenChange={setShowStayPopup}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{isCourseBooking ? 'Accommodation Included' : 'Accommodation Request Noted'}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {isCourseBooking
-                  ? 'Accommodation free with us for courses.'
-                  : 'Deposit payable now for your dives and accommodation total pricing to be confirmed. Please leave details in the form below and we will contact to confirm your total amount payable on arrival or deposit before arriving.'}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction>OK</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog><AlertDialog
-          open={showSkipPaymentPopup}
-          onOpenChange={(open) => {
-            setShowSkipPaymentPopup(open);
-            if (!open) {
+      <AlertDialog open={showStayPopup} onOpenChange={setShowStayPopup}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{isCourseBooking ? 'Accommodation Included' : 'Accommodation Request Noted'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isCourseBooking
+                ? 'Accommodation free with us for courses.'
+                : 'Deposit payable now for your dives and accommodation total pricing to be confirmed. Please leave details in the form below and we will contact to confirm your total amount payable on arrival or deposit before arriving.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={showSkipPaymentPopup}
+        onOpenChange={(open) => {
+          setShowSkipPaymentPopup(open);
+          if (!open) {
+            form.reset();
+            navigate('/');
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Inquiry Sent</AlertDialogTitle>
+            <AlertDialogDescription>{SKIP_PAYMENT_MESSAGE}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => {
               form.reset();
-            }
-          } }
-        >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Inquiry Sent</AlertDialogTitle>
-                <AlertDialogDescription>{SKIP_PAYMENT_MESSAGE}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogAction onClick={() => {
-                  form.reset();
-                  setShowSkipPaymentPopup(false);
-                } }>OK</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog></>
+              navigate('/');
+            }}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
