@@ -22,7 +22,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Hero />
       <About />
-      <DiveSites />
+      {/* <DiveSites /> */}
       <Courses />
       <FunDiving />
       <Gallery />

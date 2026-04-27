@@ -64,6 +64,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ isOpen, onClose, itemType, it
   }, [isOpen, itemTitle, form]);
 
   const onSubmit = async (data: BookingFormData) => {
+    console.log('BookingForm onSubmit called with data:', data);
     setIsSubmitting(true);
     try {
       const paymentChoice = (data as any).paymentChoice || 'none';
