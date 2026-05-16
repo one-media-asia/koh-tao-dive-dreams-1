@@ -79,7 +79,7 @@ export default function SelfReliantDiver() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Word zelfredzaam</h2>
           <p className="text-gray-700 mb-4">Bouw het vertrouwen en de vaardigheden op om zelfstandig en veilig te duiken.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=self-reliant&type=course')}>Boek nu</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=self-reliant&type=course'}>Boek nu</Button>
         </Card>
 
         <div className="mt-12">

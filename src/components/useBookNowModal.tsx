@@ -1,11 +1,10 @@
-// Shared modal state for Book Now buttons
-import React, { useState } from 'react';
-import BookNowModal from '@/components/BookNowModal';
+// Shared compatibility hook for older Book Now buttons.
 
 export function useBookNowModal() {
-  const [showBookNow, setShowBookNow] = useState(false);
-  const BookNowModalComponent = (
-    <BookNowModal open={showBookNow} onClose={() => setShowBookNow(false)} />
-  );
+  const showBookNow = false;
+  const setShowBookNow = (open: boolean) => {
+    if (open) window.location.href = 'https://www.divinginasia.com/booking';
+  };
+  const BookNowModalComponent = null;
   return { showBookNow, setShowBookNow, BookNowModalComponent };
 }

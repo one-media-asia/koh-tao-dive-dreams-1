@@ -69,7 +69,7 @@ export default function DiveAgainstDebris() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Help de oceaan schoonmaken</h2>
           <p className="text-gray-700 mb-4">Doe mee met onze oceaanopruimingen en maak echt verschil voor het milieu.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=dive-against-debris&type=course')}>Boek nu</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=dive-against-debris&type=course'}>Boek nu</Button>
         </Card>
 
         <div className="mt-12">

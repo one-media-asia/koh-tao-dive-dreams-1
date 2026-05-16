@@ -22,7 +22,7 @@ export default function EmergencyO2() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Schrijf je nu in</h2>
           <p className="text-gray-700 mb-4">Deze certificering is nuttig voor winkelmedewerkers, bootbemanningen en duikprofessionals.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=emergency-o2&type=course')}>Boek nu</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=emergency-o2&type=course'}>Boek nu</Button>
         </Card>
 
         <div className="mt-12">

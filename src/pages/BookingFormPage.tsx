@@ -78,11 +78,15 @@ const       BookingPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const apiBaseRaw = (import.meta.env.VITE_API_BASE_URL || '').trim();
-  const apiBaseNormalized = apiBaseRaw
-    ? (apiBaseRaw.startsWith('http://') || apiBaseRaw.startsWith('https://')
-        ? apiBaseRaw
-        : `https://${apiBaseRaw}`)
-    : 'https://koh-tao-dive-dreams-mocha.vercel.app';
+  const isDivingInAsiaHost =
+    typeof window !== 'undefined' && /(^|\.)divinginasia\.com$/i.test(window.location.hostname);
+  const apiBaseNormalized = isDivingInAsiaHost
+    ? ''
+    : (apiBaseRaw
+        ? (apiBaseRaw.startsWith('http://') || apiBaseRaw.startsWith('https://')
+            ? apiBaseRaw
+            : `https://${apiBaseRaw}`)
+        : '');
   const apiBase = apiBaseNormalized.replace(/\/+$/, '');
   const apiUrl = (path: string) => `${apiBase}${path}`;
   const courseSlug = (searchParams.get('course') || '').trim();
@@ -210,14 +214,21 @@ const       BookingPage: React.FC = () => {
       };
 
       let persisted = false;
+      let persistenceError = '';
       try {
-        const dbRes = await fetch(`${import.meta.env.VITE_API_URL}/api/sqlite-bookings`, {
+        const dbRes = await fetch(apiUrl('/api/bookings'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(apiBookingPayload),
         });
         persisted = dbRes.ok;
+        if (!dbRes.ok) {
+          const dbPayload = await dbRes.json().catch(() => ({}));
+          persistenceError = dbPayload?.error || dbPayload?.message || `HTTP ${dbRes.status}`;
+          console.error('Booking database save failed:', persistenceError, dbPayload);
+        }
       } catch (dbErr) {
+        persistenceError = dbErr instanceof Error ? dbErr.message : 'Unknown database save error';
         console.warn('Booking persistence failed; continuing with email flow.', dbErr);
       }
 
@@ -256,6 +267,9 @@ const       BookingPage: React.FC = () => {
       if (res.ok && responseData.success) {
         if (responseData.warning) {
           toast.warning(`Booking saved, but email notification needs attention: ${responseData.warning}`);
+        }
+        if (!persisted) {
+          toast.error(`Email sent, but database save failed: ${persistenceError || 'unknown error'}`);
         }
         if (data.paymentChoice === 'now' && amountMajor > 0) {
           setShowPaymentLinks(true);

@@ -5,7 +5,14 @@ document.addEventListener('DOMContentLoaded', function () {
   const modal = document.getElementById('booking-modal');
   const openBtn = document.querySelector('.book-now-btn');
   const closeBtn = document.getElementById('booking-modal-close');
+  if (openBtn) {
+    openBtn.onclick = () => {
+      window.location.href = '/booking';
+    };
+  }
+  if (!modal) return;
   const form = modal.querySelector('form');
+  if (!form) return;
   const courseSelect = document.createElement('select');
   const priceDisplay = document.createElement('div');
   const depositDisplay = document.createElement('div');
@@ -58,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
   form.appendChild(sendInquiryBtn);
 
   // Modal open/close
-  openBtn.onclick = () => { modal.style.display = 'flex'; };
+  if (openBtn) openBtn.onclick = () => { window.location.href = '/booking'; };
   closeBtn.onclick = () => { modal.style.display = 'none'; };
   window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
 

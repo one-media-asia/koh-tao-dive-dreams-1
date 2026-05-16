@@ -78,7 +78,7 @@ export default function PeakPerformanceBuoyancy() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Perfectioneer je drijfvermogen</h2>
           <p className="text-gray-700 mb-4">Beheers de kunst van drijfvermogencontrole voor veiligere en efficiëntere duiken.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=peak-buoyancy&type=course')}>Boek nu</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=peak-buoyancy&type=course'}>Boek nu</Button>
         </Card>
 
         <div className="mt-12">

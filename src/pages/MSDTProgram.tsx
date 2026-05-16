@@ -53,15 +53,13 @@ const MSDTProgram: React.FC = () => {
     fallbackContent,
   });
 
-  const bookingUrl = `/booking?item=${encodeURIComponent(
+  const bookingUrl = `https://www.divinginasia.com/booking?item=${encodeURIComponent(
     content.hero_title || 'PADI Master Scuba Diver Trainer (MSDT) Program'
   )}&type=course&currency=THB`;
 
   const contactRef = useRef<HTMLDivElement>(null);
-  const handleContactScroll = () => {
-    if (contactRef.current) {
-      contactRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+  const handleBooking = () => {
+    window.location.href = bookingUrl;
   };
   return (
     <div className="min-h-screen bg-background">
@@ -130,7 +128,7 @@ const MSDTProgram: React.FC = () => {
             </CardHeader>
             <CardContent>
               <p className="mb-4">{content.enroll_body}</p>
-              <Button onClick={handleContactScroll}>{content.enroll_cta}</Button>
+              <Button onClick={handleBooking}>{content.enroll_cta}</Button>
             </CardContent>
           </Card>
         </div>

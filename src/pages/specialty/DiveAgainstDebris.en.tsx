@@ -83,7 +83,7 @@ export default function DiveAgainstDebris() {
               <Button 
                 variant="default" 
                 className="bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => navigate('/booking?item=3%20Specialty%20Bundle&type=course&price=18000&currency=THB')}
+                onClick={() => window.location.href = 'https://www.divinginasia.com/booking?item=3%20Specialty%20Bundle&type=course&price=18000&currency=THB'}
               >
                 Book 3 Specialty Bundle
               </Button>
@@ -94,7 +94,7 @@ export default function DiveAgainstDebris() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Help Clean the Ocean</h2>
           <p className="text-gray-700 mb-4">Join our ocean cleanup efforts and make a real difference for the environment.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=dive-against-debris&type=course')}>Book Now</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=dive-against-debris&type=course'}>Book Now</Button>
         </Card>
 
         <div className="mt-12">

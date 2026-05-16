@@ -1,74 +1,65 @@
 // /api/bookings.js (for Vercel)
-import { Client } from 'pg';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const getSupabase = () => {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase server environment variables');
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey);
+};
 
 export default async function handler(req, res) {
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL, // Set this in Vercel env vars
-  });
-  await client.connect();
+  let supabase;
+
+  try {
+    supabase = getSupabase();
+  } catch (err) {
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'Supabase is not configured' });
+  }
 
   if (req.method === 'GET') {
-    try {
-      const { rows } = await client.query('SELECT * FROM bookings');
-      res.status(200).json({ bookings: rows });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  } else if (req.method === 'POST') {
-    const { id, status, comments, ...rest } = req.body || {};
-    if (!id) {
-      // CREATE new booking
-      const fields = Object.keys(rest);
-      const values = Object.values(rest);
-      if (fields.length === 0) {
-        res.status(400).json({ error: 'No booking data provided' });
-        await client.end();
-        return;
-      }
-      const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
-      const sql = `INSERT INTO bookings (${fields.join(', ')}) VALUES (${placeholders}) RETURNING *`;
-      try {
-        const result = await client.query(sql, values);
-        res.status(201).json(result.rows[0]);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-      await client.end();
-      return;
-    }
-    // UPDATE booking by id
-    const updateFields = [];
-    const updateValues = [];
-    let idx = 1;
-    if (status !== undefined) {
-      updateFields.push(`status = $${idx++}`);
-      updateValues.push(status);
-    }
-    if (comments !== undefined) {
-      updateFields.push(`comments = $${idx++}`);
-      updateValues.push(comments);
-    }
-    for (const key in rest) {
-      updateFields.push(`${key} = $${idx++}`);
-      updateValues.push(rest[key]);
-    }
-    if (updateFields.length === 0) {
-      res.status(400).json({ error: 'No fields to update' });
-      await client.end();
-      return;
-    }
-    updateValues.push(id);
-    const updateSql = `UPDATE bookings SET ${updateFields.join(', ')} WHERE id = $${idx} RETURNING *`;
-    try {
-      const result = await client.query(updateSql, updateValues);
-      res.status(200).json(result.rows[0]);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-    await client.end();
-  } else {
-    res.setHeader('Allow', ['GET', 'POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
-    await client.end();
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ bookings: data });
   }
+
+  if (req.method === 'POST') {
+    const { id, ...rest } = req.body || {};
+
+    if (!id) {
+      if (!rest.name || !rest.email) {
+        return res.status(400).json({ error: 'Missing required fields: name and email' });
+      }
+
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert([{ ...rest, created_at: rest.created_at || new Date().toISOString() }])
+        .select()
+        .single();
+
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(201).json(data);
+    }
+
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ ...rest, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json(data);
+  }
+
+  res.setHeader('Allow', ['GET', 'POST']);
+  return res.status(405).end(`Method ${req.method} Not Allowed`);
 }

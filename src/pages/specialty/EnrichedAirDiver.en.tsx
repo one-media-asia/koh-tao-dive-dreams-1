@@ -90,7 +90,7 @@ export default function EnrichedAirDiver() {
               <Button 
                 variant="default" 
                 className="bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => navigate('/booking?item=3%20Specialty%20Bundle&type=course&price=18000&currency=THB')}
+                onClick={() => window.location.href = 'https://www.divinginasia.com/booking?item=3%20Specialty%20Bundle&type=course&price=18000&currency=THB'}
               >
                 Book 3 Specialty Bundle
               </Button>
@@ -100,7 +100,7 @@ export default function EnrichedAirDiver() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Extend Your Bottom Time</h2>
           <p className="text-gray-700 mb-4">Learn to safely use enriched air for longer, more enjoyable dives.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=enriched-air&type=course')}>Book Now</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=enriched-air&type=course'}>Book Now</Button>
         </Card>
 
         <div className="mt-12">

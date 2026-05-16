@@ -89,7 +89,7 @@ export default function UnderwaterNaturalist() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Ontdek het zeeleven</h2>
           <p className="text-gray-700 mb-4">Ontdek de wonderen van onderwaterecosystemen. Doe mee met onze Underwater Naturalist-cursus.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=underwater-naturalist&type=course')}>Boek nu</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=underwater-naturalist&type=course'}>Boek nu</Button>
         </Card>
 
         {/* Contact */}

@@ -32,7 +32,7 @@ export default function AdaptiveSupport() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Klaar om te duiken?</h2>
           <p className="text-gray-700 mb-4">Neem contact met ons op om je persoonlijke wensen en planning te bespreken.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=adaptive-support&type=course')}>Informatie / Boeken</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=adaptive-support&type=course'}>Informatie / Boeken</Button>
         </Card>
 
         <div className="mt-12">

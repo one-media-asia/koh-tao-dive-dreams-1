@@ -69,7 +69,7 @@ export default function CoralWatch() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Bescherm onze riffen</h2>
           <p className="text-gray-700 mb-4">Draag bij aan koraalrifonderzoek en bescherming met echte monitoringsdata.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=coral-watch&type=course')}>Boek nu</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=coral-watch&type=course'}>Boek nu</Button>
         </Card>
 
         <div className="mt-12">

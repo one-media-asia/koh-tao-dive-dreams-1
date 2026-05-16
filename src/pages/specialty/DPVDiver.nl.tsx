@@ -79,7 +79,7 @@ export default function DPVDiver() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Duik met DPV-scooters</h2>
           <p className="text-gray-700 mb-4">Ervaar duiken met voortstuwingsvoertuigen om meer afstand af te leggen met minder inspanning.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=dpv&type=course')}>Boek nu</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=dpv&type=course'}>Boek nu</Button>
         </Card>
 
         <div className="mt-12">

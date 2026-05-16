@@ -4,7 +4,6 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useBookNowModal } from '@/components/useBookNowModal';
 import { usePageContent } from '@/hooks/usePageContent';
 // PageContentEditor import removed
 import Contact from './Contact';
@@ -74,7 +73,6 @@ const CoursePageTemplate: React.FC<CoursePageProps> = ({
 
 
 
-  const { setShowBookNow, BookNowModalComponent } = useBookNowModal();
   const { content, isLoading } = usePageContent({
     pageSlug,
     locale,
@@ -139,15 +137,15 @@ const CoursePageTemplate: React.FC<CoursePageProps> = ({
   const displaySections = cmsSections.length > 0 ? cmsSections : sections;
   const displayFaqs = cmsFaqs.length > 0 ? cmsFaqs : faqs;
   const thbAmount = parseAmount(priceThb);
-  const bookingUrl = `/booking?item=${encodeURIComponent(bookingItemName || '')}&type=${bookingType}&price=${thbAmount}&currency=THB`;
+  const bookingUrl = `https://www.divinginasia.com/booking?item=${encodeURIComponent(bookingItemName || '')}&type=${bookingType}&price=${thbAmount}&currency=THB`;
 
   const heroImageUrl = heroImage || images[0];
 
   const { exchangeRates } = useCurrency();
 
-  // Scroll to contact section
+  // Keep course CTAs on the dedicated booking form.
   const openBookNow = () => {
-    setShowBookNow(true);
+    window.location.href = bookingUrl;
   };
 
   return (
@@ -277,7 +275,6 @@ const CoursePageTemplate: React.FC<CoursePageProps> = ({
         <section className="mt-12" id="contact-section">
           <Contact />
         </section>
-        {BookNowModalComponent}
       </main>
     </div>
   );

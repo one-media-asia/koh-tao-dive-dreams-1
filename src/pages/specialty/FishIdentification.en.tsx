@@ -83,7 +83,7 @@ export default function FishIdentification() {
               <Button 
                 variant="default" 
                 className="bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => navigate('/booking?item=3%20Specialty%20Bundle&type=course&price=18000&currency=THB')}
+                onClick={() => window.location.href = 'https://www.divinginasia.com/booking?item=3%20Specialty%20Bundle&type=course&price=18000&currency=THB'}
               >
                 Book 3 Specialty Bundle
               </Button>
@@ -94,7 +94,7 @@ export default function FishIdentification() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Discover Marine Life</h2>
           <p className="text-gray-700 mb-4">Learn to identify and appreciate the rich marine biodiversity around Koh Tao.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=fish-id&type=course')}>Book Now</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=fish-id&type=course'}>Book Now</Button>
         </Card>
 
         <div className="mt-12">

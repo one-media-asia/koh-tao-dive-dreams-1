@@ -69,7 +69,7 @@ export default function FishIdentification() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Ontdek het zeeleven</h2>
           <p className="text-gray-700 mb-4">Leer de rijke mariene biodiversiteit rond Koh Tao herkennen en waarderen.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=fish-id&type=course')}>Boek nu</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=fish-id&type=course'}>Boek nu</Button>
         </Card>
 
         <div className="mt-12">

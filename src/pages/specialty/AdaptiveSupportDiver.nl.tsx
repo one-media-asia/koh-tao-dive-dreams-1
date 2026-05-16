@@ -89,7 +89,7 @@ export default function AdaptiveSupportDiver() {
         <Card className="mb-8 p-6 bg-green-50">
           <h2 className="text-2xl font-bold mb-6">Maak duiken toegankelijk</h2>
           <p className="text-gray-700 mb-4">Help inclusieve duikervaringen creëren. Doe vandaag nog mee met onze Adaptive Support Diver-cursus.</p>
-          <Button size="lg" onClick={() => navigate('/booking?course=adaptive-support&type=course')}>Boek nu</Button>
+          <Button size="lg" onClick={() => window.location.href = 'https://www.divinginasia.com/booking?course=adaptive-support&type=course'}>Boek nu</Button>
         </Card>
 
         {/* Contact */}

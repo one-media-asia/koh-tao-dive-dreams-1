@@ -1,1 +1,1 @@
-export { default } from '../../api/bookings/index.js';
+export { default } from '../../api/bookings.js';
